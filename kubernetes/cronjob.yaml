@@ -14,9 +14,7 @@ spec:
           containers:
           - name: cronjob-fail-notifier
             image: cronjob-notifier:latest
-            imagePullPolicy: Never
-            # image: 693435214819.dkr.ecr.us-west-2.amazonaws.com/tools:cronjob.fail.notifier.2.0
-            # imagePullPolicy: Always
+            imagePullPolicy: NotPresent
             envFrom:
             - configMapRef:
                 name: cronjob-fail-notifier-env
@@ -32,7 +30,7 @@ data:
   SERVICE_FAILED_FROM_LAST_MIN: "5"
   IS_IN_CLUSTER: "true"
   SLACK_NOTIFY_CHANNEL: "general"
-  SLACK_BOT_TOKEN: "xoxb-2029072627318-2043146586868-a5Zg6DsrjUbI24LUThVaT3O8"
+  SLACK_BOT_TOKEN: ""
   SLACK_DISPLAY_USER: "My bot"
 
   

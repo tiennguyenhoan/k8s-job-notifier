@@ -1,25 +1,46 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: hello
+  name: fail-cronjob
 spec:
+  startingDeadlineSeconds: 200
+  schedule: '*/5 * * * *'
   jobTemplate:
     metadata:
-      name: hello
+      name: fail-job
     spec:
-      backoffLimit: 3
-      activeDeadlineSeconds: 5 
+      backoffLimit: 5
       template:
         spec:
+          restartPolicy: Never
           containers:
           - image: busybox
             name: hello
             args:
               - /bin/sh
               - -c
-              - test=$(date +%s); if [ $((test%2)) -eq 0 ]; then sleep 30; else echo "skip...."; fi
-            resources: {}
-          restartPolicy: OnFailure
-  schedule: '* * * * *'
-status: {}
+              - counter=0; while true; do if [ $counter -eq 50 ]; then exit 1; else echo "[$cdate] skip...."; fi; counter=$((counter+1)); sleep 1; done
 
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: success-cronjob
+spec:
+  startingDeadlineSeconds: 200
+  schedule: '* * * * *'
+  jobTemplate:
+    metadata:
+      name: success-cronjob
+    spec:
+      backoffLimit: 5
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - image: busybox
+            name: hello
+            args:
+              - /bin/sh
+              - -c
+              - counter=0; while [ $counter -le 5 ]; do echo "[$counter] skip...."; counter=$((counter+1)); sleep 1; done

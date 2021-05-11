@@ -6,6 +6,9 @@ import (
   "errors"
   "net/http"
   "time"
+  "fmt"
+  "net/http/httputil"
+  "log"
 )
 
 const DefaultSlackTimeout = 5 * time.Second
@@ -80,12 +83,12 @@ func (sc SlackClient) sendHttpRequest(slackRequest SlackPayload) error {
     return err
   }
 
-  // defer resp.Body.Close()
-  //  dump, err := httputil.DumpResponse(resp, true)
-	// if err != nil {
-	//   log.Fatal(err)
-	// }
-  // fmt.Println(string(dump))
+  defer resp.Body.Close()
+   dump, err := httputil.DumpResponse(resp, true)
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println(string(dump))
 
 
   if sc.Bottoken != "" && sc.WebHookUrl == "" { // If defined webhookurl so we don't need to send as bot, only pick 1

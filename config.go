@@ -5,38 +5,12 @@ import (
   "strconv"
 )
 
-func getNamespace() (namespace string) {
-	if namespace = os.Getenv("SERVICE_NAMESPACE"); namespace == "" {
-		namespace = "default"
-	}
-	return namespace
-}
-
-func getClusterName() (clusterName string) {
-	if clusterName = os.Getenv("SERVICE_CLUSTER_NAME"); clusterName == "" {
-		clusterName = ""
-	}
-	return clusterName
-}
-
-func getJobFailThreshold() int32 {
-  failThreshold, err := strconv.ParseInt(os.Getenv("SERVICE_FAIL_THRESHOLD"), 10, 32)
+func isNotifyFailOnly() bool {
+  isNotifyFailOnly, err := strconv.ParseBool(os.Getenv("IS_NOTIFY_FAIL_ONLY"))
   if err != nil {
-    return int32(1)
+    return false
   }
-  return int32(failThreshold)
-}
-
-func getJobFailedLastMin() int32 {
-  failedFromLastMin, err := strconv.ParseInt(os.Getenv("SERVICE_FAILED_FROM_LAST_MIN"), 10, 32)
-  if err != nil {
-    return int32(5)
-  }
-
-  if failedFromLastMin < 1 {
-    failedFromLastMin = 1
-  }
-  return int32(failedFromLastMin)
+  return isNotifyFailOnly
 }
 
 func isInCluster() bool {
@@ -45,6 +19,40 @@ func isInCluster() bool {
     return false
   }
   return inCluster
+}
+
+func getNamespace() (namespace string) {
+	if namespace = os.Getenv("JOB_NAMESPACE"); namespace == "" {
+		namespace = "default"
+	}
+	return namespace
+}
+
+func getClusterName() (clusterName string) {
+	if clusterName = os.Getenv("CLUSTER_NAME"); clusterName == "" {
+		clusterName = ""
+	}
+	return clusterName
+}
+
+func jobFailThreshold() int32 {
+  failThreshold, err := strconv.ParseInt(os.Getenv("JOB_FAIL_THRESHOLD"), 10, 32)
+  if err != nil {
+    return int32(1)
+  }
+  return int32(failThreshold)
+}
+
+func getJobFromLastMin() int32 {
+  jobFromLastMin, err := strconv.ParseInt(os.Getenv("JOB_FROM_LAST_MIN"), 10, 32)
+  if err != nil {
+    return int32(5)
+  }
+
+  if jobFromLastMin < 1 {
+    jobFromLastMin = 1
+  }
+  return int32(jobFromLastMin)
 }
 
 func getSlackWebhook() (webhook string) {

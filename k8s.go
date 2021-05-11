@@ -55,6 +55,7 @@ func getConfig() (config *rest.Config, err error) {
       return nil, err
     }
   }
+
   return config, nil
 }
 
