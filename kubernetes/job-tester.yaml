@@ -1,0 +1,25 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  jobTemplate:
+    metadata:
+      name: hello
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 5 
+      template:
+        spec:
+          containers:
+          - image: busybox
+            name: hello
+            args:
+              - /bin/sh
+              - -c
+              - test=$(date +%s); if [ $((test%2)) -eq 0 ]; then sleep 30; else echo "skip...."; fi
+            resources: {}
+          restartPolicy: OnFailure
+  schedule: '* * * * *'
+status: {}
+

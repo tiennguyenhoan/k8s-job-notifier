@@ -1,0 +1,74 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-fail-notifier
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: cronjob-fail-notifier
+          containers:
+          - name: cronjob-fail-notifier
+            image: cronjob-notifier:latest
+            imagePullPolicy: Never
+            # image: 693435214819.dkr.ecr.us-west-2.amazonaws.com/tools:cronjob.fail.notifier.2.0
+            # imagePullPolicy: Always
+            envFrom:
+            - configMapRef:
+                name: cronjob-fail-notifier-env
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "cronjob-fail-notifier-env"
+data:
+  SERVICE_CLUSTER_NAME: "Empire staging"
+  SERVICE_FAIL_THRESHOLD: "1"
+  SERVICE_FAILED_FROM_LAST_MIN: "5"
+  IS_IN_CLUSTER: "true"
+  SLACK_NOTIFY_CHANNEL: "general"
+  SLACK_BOT_TOKEN: "xoxb-2029072627318-2043146586868-a5Zg6DsrjUbI24LUThVaT3O8"
+  SLACK_DISPLAY_USER: "My bot"
+
+  
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cronjob-fail-notifier
+  namespace: default
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: job-reader
+  namespace: default
+rules:
+  - apiGroups: ["batch"] 
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cronjob-fail-notifier
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: job-reader
+subjects:
+  - kind: ServiceAccount
+    name: cronjob-fail-notifier
+    namespace: default
