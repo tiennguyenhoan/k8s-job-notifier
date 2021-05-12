@@ -1,4 +1,4 @@
-module cronjob-fail-notifier
+module k8s-job-notifier
 
 go 1.16
 

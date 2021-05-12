@@ -5,27 +5,30 @@ import (
   "strconv"
   "time"
   "os"
+  k8s "k8s-job-notifier/kubernetes"
+  c "k8s-job-notifier/config"
+  slack "k8s-job-notifier/slack"
 )
 
 func main() {
-  clientset, err := connectToK8s()
+  client, err := k8s.ConnectToCluster()
   if err != nil {
     log.Fatalf("Fail to connect to Cluster %v", err)
     os.Exit(1)
   }
 
-  sc := SlackClient{
-    WebHookUrl: getSlackWebhook(),
-    UserName:   getSlackDisplayUser(),
-    Channel:    getSlackChannel(),
-    Bottoken:   getSlackBotToken(),
+  sc := slack.SlackClient{
+    WebHookUrl: c.GetSlackWebhook(),
+    UserName:   c.GetSlackDisplayUser(),
+    Channel:    c.GetSlackChannel(),
+    Bottoken:   c.GetSlackBotToken(),
   }
 
-  namespace := getNamespace()
+  namespace := c.GetNamespace()
 
   log.Printf("Fetching jobs from namespace: %s\n", namespace)
 
-  jobs, err := listJobs(clientset, namespace)
+  jobs, err := client.ListJobs(namespace)
   if err != nil {
     log.Fatalf("Failed to list all jobs in the namespace %v", err)
     os.Exit(0)
@@ -34,42 +37,44 @@ func main() {
   jobCheckingTime := time.Now().Unix()
 
 	for _, job := range jobs.Items {
-    var sp *SlackPayload
+    var sp *slack.SlackPayload
 
     jobStartTime := job.Status.StartTime
+    jobStartTimeFormmated := jobStartTime.Format("2006.01.02 15:04:05") // Format time defined by golang, do not change it.
 
-    if jobStartTime.Add(time.Duration(getJobFromLastMin())*time.Minute).Unix() > jobCheckingTime {
-      if job.Status.Failed >= jobFailThreshold() {
+    // Only pick job form the last xxx minutes
+    if jobStartTime.Add(time.Duration(c.GetJobFromLastMin())*time.Minute).Unix() > jobCheckingTime {
+      if job.Status.Failed >= c.JobFailThreshold() {
 
-        attachment := Attachment{
-          Color: "#f7310a",                                                            // #Red for error
-          Text: "*Cluster Name*:   " + getClusterName() + "\n" +
-              "*Start time*:   " + jobStartTime.Format("2006.01.02 15:04:05") + "\n" + // Format time defined by golang, do not change it.
+        attachment := slack.Attachment{
+          Color: "#f7310a",                                         // #Red for error
+          Text: "*Cluster Name*:   " + c.GetClusterName() + "\n" +
+              "*Start time*:   " + jobStartTimeFormmated + "\n" +
               "Fail time(s):   " + strconv.FormatInt(int64(job.Status.Failed), 10),
           MarkdownIn: []string{"pretext", "text"},
         }
 
-        sp = &SlackPayload {
-          Text: "[FAIL] job `" + job.Name +"`",
-          Attachments: []Attachment{attachment},
+        sp = &slack.SlackPayload {
+          Text: "[FAIL] Job `" + job.Name +"`",
+          Attachments: []slack.Attachment{attachment},
         }
 
-      } else if job.Status.Succeeded > 0 && !isNotifyFailOnly() {
+      } else if job.Status.Succeeded > 0 && !c.IsNotifyFailOnly() {
 
-        attachment := Attachment{
-          Color: "#03fc28",                                                           // #Green for success 
-          Text: "*Cluster Name*:   " + getClusterName() + "\n" +
-              "*Start time*:   " + jobStartTime.Format("2006.01.02 15:04:05"),        // Format time defined by golang, do not change it.
+        attachment := slack.Attachment{
+          Color: "#03fc28",                                         // #Green for success 
+          Text: "*Cluster Name*:   " + c.GetClusterName() + "\n" +
+              "*Start time*:   " + jobStartTimeFormmated,
           MarkdownIn: []string{"pretext", "text"},
         }
 
-        sp = &SlackPayload {
-          Text: "[SUCCESS] job `" + job.Name +"`",
-          Attachments: []Attachment{attachment},
+        sp = &slack.SlackPayload {
+          Text: "[SUCCESS] Job `" + job.Name +"`",
+          Attachments: []slack.Attachment{attachment},
         }
       }
 
-      notifyErr := sc.sendNotification(*sp)
+      notifyErr := sc.SendNotification(*sp)
       if notifyErr != nil {
         log.Fatalf("Failed to send notify to slack %v", notifyErr)
         os.Exit(1)

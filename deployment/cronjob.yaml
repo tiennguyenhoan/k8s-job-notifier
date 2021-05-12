@@ -1,0 +1,70 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: job-notifier
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: job-notifier
+          containers:
+          - name: job-notifier
+            image: job-notifier:latest
+            imagePullPolicy: Always    # For Local Development, should change to IfNotPresent
+            envFrom:
+            - configMapRef:
+                name: job-notifier-env
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: job-notifier-env
+data:
+  IS_IN_CLUSTER: "true"
+  IS_NOTIFY_FAIL_ONLY: "false"
+  JOB_NAMESPACE: "default"
+  CLUSTER_NAME: "My K8s Cluster"
+  JOB_FAIL_THRESHOLD: "5"
+  JOB_FROM_LAST_MIN: "5"
+  SLACK_WEBHOOK_URL: ""
+  SLACK_BOT_TOKEN: ""
+  SLACK_NOTIFY_CHANNEL: "general"
+  SLACK_DISPLAY_USER: "My kubernetes bot"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-notifier
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: job-reader
+rules:
+  - apiGroups: ["batch"] 
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-notifier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: job-reader
+subjects:
+  - kind: ServiceAccount
+    name: job-notifier
